@@ -46,7 +46,7 @@ statement: obj op obj { std::cout << "Statement!" << std::endl; apply($1, $2, $3
 obj: id { $$=new ID($1, false); }
 |    lit { $$=new ID($1, true); }
 |    obj dot id { $$=new ID($1, new ID($3, false)); }
-|    Popen obj Pclose { ; }
+|    Popen obj Pclose { $$=$2; }
 ;
 
 /*ifclause: statement then statement { }
