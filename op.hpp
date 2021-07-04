@@ -2,26 +2,77 @@
 #define OP_HPP
 
 #include <string>
+#include <unordered_map>
+#include <vector>
+#include <list>
 
 int yyparse();
 void yyerror(const std::string&);
 
-struct ID {
-	char* terminal;
-	ID *first, *second;
-	bool isTerminal, isLiteral;
+// ID
+typedef std::list<std::string> VirginID;
+typedef std::vector<std::string> ChadID;
 
-	ID() = default;
+// Value
+struct Value {
+	enum { CHAR, INT, UINT, FLOAT };
+	size_t type;
+	bool isArray;
+	union {
+		char c;
+		int64_t i;
+		uint64_t u;
+		long double f;
+	} val;
 
-	ID(char* terminal, bool isLiteral)
-		: terminal(terminal), isTerminal(true), isLiteral(isLiteral)
-	{}
+	std::vector<Value> arr;
 
-	ID(ID* first, ID* second)
-		: first(first), second(second), isTerminal(false)
-	{}
+	inline operator bool() const { return downcast(); }
+	bool downcast() const;
 };
 
-void apply(ID* id1, char* op, ID* id2);
+// Downcast to bool
+
+// Scope (universe)
+struct Scope {
+	std::unordered_map<std::string, Value> vars;
+};
+
+// Statements
+struct Statement {
+	virtual Value run() = 0;
+};
+
+struct UnaryStatement : Statement {
+	ChadID id;
+	// Pretty sure this can be done faster
+	std::string op;
+
+	Value run() override;
+};
+
+struct BinaryStatement : Statement {
+	ChadID id1, id2;
+	std::string oper;
+
+	Value run() override;
+};
+
+// Bunch of statements
+typedef std::list<Statement*> VirginBlock;
+typedef std::vector<Statement*> ChadBlock;
+
+struct IfStatement : Statement {
+	ChadBlock* check;
+	ChadBlock* ifTrue;
+	ChadBlock* ifFalse;
+	bool hasElse;
+
+	Value run() override;
+};
+
+// Functions to call from yacc
+ChadID* v2cID(VirginID* id);
+ChadBlock* v2cBlock(VirginBlock* id);
 
 #endif

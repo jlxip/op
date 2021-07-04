@@ -9,7 +9,11 @@ int yylex();
 	char* _id;
 	char* _op;
 	char* _lit;
-	ID* _obj;
+	VirginID* _obj;
+	Statement* _statement;
+	IfStatement* _if;
+	VirginBlock* _vblock;
+	ChadBlock* _block;
 }
 
 %start line
@@ -18,6 +22,7 @@ int yylex();
 %token comment
 %token separator
 %token then
+%token notthen
 %token Popen
 %token Pclose
 %token Copen
@@ -28,33 +33,65 @@ int yylex();
 %token <_lit> lit
 
 %type <_obj> obj
+%type <_statement> statement small
+%type <_if> ifclause elseclause
+%type <_vblock> line
+%type <_block> block
 
 %%
 
-line: statement line
-|     lbreak line
-|     comment line
-|     separator line
-|     /* ɛ */
+line: statement line { $$=$2; $$->push_front($1); }
+|     lbreak line { $$=$2; }
+|     comment line { $$=$2; }
+|     separator line { $$=$2; }
+|     /* ɛ */ { $$=new VirginBlock; }
 ;
 
-statement: obj op obj { std::cout << "Statement!" << std::endl; apply($1, $2, $3); }
-/*|          ifclause {}*/
-|          Popen statement Pclose { ; }
+statement: ifclause {
+	auto* aux = $1;
+	aux->hasElse = false;
+	$$=aux; }
+|          ifclause elseclause {
+	auto* aux = $1;
+	aux->ifFalse = $2->ifFalse;
+	aux->hasElse = true;
+	delete $2;
+	$$=aux; }
+|          small { $$=$1; }
 ;
 
-obj: id { $$=new ID($1, false); }
-|    lit { $$=new ID($1, true); }
-|    obj dot id { $$=new ID($1, new ID($3, false)); }
+small: /*obj op { $$=makeUnary($1, $2); }*/
+obj op obj {
+	auto* aux = new BinaryStatement;
+	auto* tmp=v2cID($1); aux->id1=*tmp; delete tmp;
+	aux->oper = $2;
+	tmp = v2cID($3); aux->id2=*tmp; delete tmp;
+	$$=aux; }
+|      Popen statement Pclose { $$=$2; }
+;
+
+obj: id { $$=new VirginID; $$->push_back($1); }
+|    lit { $$=new VirginID; $$->push_back($1); }
+|    obj dot id { $$=$1; $$->push_back($3); }
 |    Popen obj Pclose { $$=$2; }
 ;
 
-/*ifclause: statement then statement { }
-|         statement then block { }
-;*/
+ifclause: block then block {
+	$$=new IfStatement;
+	$$->check=$1;
+	$$->ifTrue=$3; }
+;
+elseclause: notthen block {
+	$$=new IfStatement;
+	$$->ifFalse=$2; }
+;
 
-/*block: '{' line '}' { ; }
-  ;*/
+block: Copen line Cclose { $$=v2cBlock($2); }
+|      small {
+	auto* aux = new VirginBlock;
+	aux->push_back($1);
+	$$=v2cBlock(aux); }
+;
 
 %%
 

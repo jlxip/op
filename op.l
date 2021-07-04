@@ -15,6 +15,7 @@ int yylex();
 "//".* { return comment; }
 ";" { return separator; }
 "=>" { return then; }
+"!=>" { return notthen; }
 "(" { return Popen; }
 ")" { return Pclose; }
 "{" { return Copen; }
@@ -24,7 +25,6 @@ int yylex();
 [^a-zA-Z_0-9.(){} \t\n]+ { yylval._op = strdup(yytext); return op; }
 [0-9]+ { yylval._lit = strdup(yytext); return lit; }
 [ \t] {}
-. { std::cerr << "Unrecognized character: " << yytext << std::endl; exit(1); }
 
 %%
 

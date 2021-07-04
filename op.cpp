@@ -2,32 +2,47 @@
 #include <iostream>
 
 int main(int agrc, char* argv[]) {
-	std::cout << "Ayo" << std::endl;
 	yyparse();
 	return 0;
 }
 
-static void recPrint(ID* id) {
-	if(id->isTerminal)
-		std::cout << id->terminal << " (T) ";
-	else {
-		std::cout << " (F) ";
-		recPrint(id->first);
-		std::cout << " (S) ";
-		recPrint(id->second);
-	}
-	if(id->isLiteral)
-		std::cout << " (L) ";
+ChadID* v2cID(VirginID* id) {
+	auto* ret = new ChadID;
+	ret->reserve(id->size());
+	for(auto const& x : *id)
+		ret->push_back(x);
+	delete id;
+	return ret;
 }
 
-void apply(ID* id1, char* op, ID* id2) {
-	std::cout << "id1: "; recPrint(id1); std::cout << std::endl;
-	std::cout << "op:  " << op << std::endl;
-	std::cout << "id2: "; recPrint(id2); std::cout << std::endl;
+ChadBlock* v2cBlock(VirginBlock* block) {
+	auto* ret = new ChadBlock;
+	ret->reserve(block->size());
+	for(auto const& x : *block)
+		ret->push_back(x);
+	delete block;
+	return ret;
+}
 
-	/*std::cout << "id1: " << id1.second->first;
-	recPrint(id1.second);
+/*Value BinaryStatement::run() {
 
-	std::cout << "op:  " << op << std::endl;
-	std::cout << "id2: " << id2.first << std::endl;*/
+}*/
+
+Value runBlock(ChadBlock* block) {
+	for(size_t i=0; i<block->size()-1; ++i)
+		(*block)[i]->run();
+	return (*block)[block->size()-1]->run();
+}
+
+Value IfStatement::run() {
+	if(runBlock(check))
+		return runBlock(ifTrue);
+	else if(hasElse)
+		return runBlock(ifFalse);
+
+	Value ret;
+	ret.type = Value::UINT;
+	ret.isArray = false;
+	ret.val.u = 0;
+	return ret;
 }
