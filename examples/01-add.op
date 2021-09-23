@@ -1,0 +1,9 @@
+a$int
+a=5
+b$int
+b=4
+c$int
+c=a
+c+=b
+out<<c
+

@@ -3,20 +3,21 @@
 #include <iostream>
 
 int yylex();
+
+static size_t lineno = 0;
 %}
 
 %union {
 	char* _id;
 	char* _op;
 	char* _lit;
-	VirginID* _obj;
+	ID* _obj;
 	Statement* _statement;
 	IfStatement* _if;
-	VirginBlock* _vblock;
-	ChadBlock* _block;
+	Block* _block;
 }
 
-%start line
+%start start
 
 %token lbreak
 %token comment
@@ -35,16 +36,17 @@ int yylex();
 %type <_obj> obj
 %type <_statement> statement small
 %type <_if> ifclause elseclause
-%type <_vblock> line
-%type <_block> block
+%type <_block> block line
 
 %%
 
+start: line { startExecution($1); }
+
 line: statement line { $$=$2; $$->push_front($1); }
-|     lbreak line { $$=$2; }
+|     lbreak line { $$=$2; ++lineno; }
 |     comment line { $$=$2; }
 |     separator line { $$=$2; }
-|     /* ɛ */ { $$=new VirginBlock; }
+|     /* ɛ */ { $$=new Block; }
 ;
 
 statement: ifclause {
@@ -63,34 +65,37 @@ statement: ifclause {
 small: /*obj op { $$=makeUnary($1, $2); }*/
 obj op obj {
 	auto* aux = new BinaryStatement;
-	auto* tmp=v2cID($1); aux->id1=*tmp; delete tmp;
+	aux->lineno = lineno;
+	aux->id1=*$1; delete $1;
 	aux->oper = $2;
-	tmp = v2cID($3); aux->id2=*tmp; delete tmp;
+	aux->id2=*$3; delete $3;
 	$$=aux; }
 |      Popen statement Pclose { $$=$2; }
 ;
 
-obj: id { $$=new VirginID; $$->push_back($1); }
-|    lit { $$=new VirginID; $$->push_back($1); }
+obj: id { $$=new ID; $$->push_back($1); }
+|    lit { $$=new ID; $$->push_back($1); }
 |    obj dot id { $$=$1; $$->push_back($3); }
 |    Popen obj Pclose { $$=$2; }
 ;
 
 ifclause: block then block {
 	$$=new IfStatement;
+	$$->lineno = lineno;
 	$$->check=$1;
 	$$->ifTrue=$3; }
 ;
 elseclause: notthen block {
 	$$=new IfStatement;
+	$$->lineno = lineno;
 	$$->ifFalse=$2; }
 ;
 
-block: Copen line Cclose { $$=v2cBlock($2); }
+block: Copen line Cclose { $$=$2; }
 |      small {
-	auto* aux = new VirginBlock;
+	auto* aux = new Block;
 	aux->push_back($1);
-	$$=v2cBlock(aux); }
+	$$=aux; }
 ;
 
 %%

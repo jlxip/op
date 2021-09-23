@@ -10,69 +10,48 @@ int yyparse();
 void yyerror(const std::string&);
 
 // ID
-typedef std::list<std::string> VirginID;
-typedef std::vector<std::string> ChadID;
+typedef std::list<std::string> ID;
 
 // Value
 struct Value {
-	enum { CHAR, INT, UINT, FLOAT };
-	size_t type;
-	bool isArray;
-	union {
-		char c;
-		int64_t i;
-		uint64_t u;
-		long double f;
-	} val;
-
-	std::vector<Value> arr;
-
-	inline operator bool() const { return downcast(); }
-	bool downcast() const;
-};
-
-// Downcast to bool
-
-// Scope (universe)
-struct Scope {
-	std::unordered_map<std::string, Value> vars;
+	Value* parent;
+	void* val;
+	//bool isArray;
 };
 
 // Statements
 struct Statement {
-	virtual Value run() = 0;
+	enum { UNARY, BINARY, IF };
+	size_t type;
+	size_t lineno = ~0;
 };
 
 struct UnaryStatement : Statement {
-	ChadID id;
-	// Pretty sure this can be done faster
+	ID id;
 	std::string op;
 
-	Value run() override;
+	UnaryStatement() { type = UNARY; }
 };
 
 struct BinaryStatement : Statement {
-	ChadID id1, id2;
+	ID id1, id2;
 	std::string oper;
 
-	Value run() override;
+	BinaryStatement() { type = BINARY; }
 };
 
 // Bunch of statements
-typedef std::list<Statement*> VirginBlock;
-typedef std::vector<Statement*> ChadBlock;
+typedef std::list<Statement*> Block;
 
 struct IfStatement : Statement {
-	ChadBlock* check;
-	ChadBlock* ifTrue;
-	ChadBlock* ifFalse;
+	Block* check;
+	Block* ifTrue;
+	Block* ifFalse;
 	bool hasElse;
 
-	Value run() override;
+	IfStatement() { type = IF; }
 };
 
-// Functions to call from yacc
-ChadID* v2cID(VirginID* id);
-ChadBlock* v2cBlock(VirginBlock* id);
+void startExecution(Block* block);
 
 #endif

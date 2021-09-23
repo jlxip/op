@@ -1,6 +1,6 @@
 TARGET=op
 GENERATED=y.tab.c lex.yy.c
-SOURCES=$(GENERATED) $(wildcard *.cpp)
+SOURCES=$(GENERATED) $(wildcard *.cpp) $(wildcard interpreter/*.cpp)
 
 all: $(TARGET)
 
